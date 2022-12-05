@@ -1073,7 +1073,7 @@ class gaussianBeam(laserBeam):
         self.con_pol = self.pol(np.array([0., 0., 0.]), 0.)
 
         # Save the parameters specific to the Gaussian beam:
-        self.s_max = s # central saturation parameter
+        self.s_max, _ = promote_to_lambda(s) # central saturation parameter
         self.wb = wb # 1/e^2 radius
         self.define_rotation_matrix()
 
@@ -1090,7 +1090,7 @@ class gaussianBeam(laserBeam):
         Rp = np.einsum('ij,j...->i...', self.rmat, R)
         rho_sq=np.sum(Rp[:2]**2, axis=0)
         # Return the intensity:
-        return self.s_max*np.exp(-2*rho_sq/self.wb**2)
+        return self.s_max(R,t)*np.exp(-2*rho_sq/self.wb**2)
 
 
 class clippedGaussianBeam(gaussianBeam):
