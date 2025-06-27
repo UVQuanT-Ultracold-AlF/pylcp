@@ -1082,6 +1082,7 @@ class obe(governingeq):
         else:
             raise ValueError('Argument initial_rho=%s not understood'%initial_rho)
 
+        reset_pos = kwargs.pop('reset_pos', False)
         old_f_avg = np.array([np.inf, np.inf, np.inf])
 
         if debug:
@@ -1117,8 +1118,8 @@ class obe(governingeq):
             else:
                 old_f_avg = copy.copy(f_avg)
                 self.set_initial_rho(self.sol.rho[:, :, -1])
-                self.set_initial_position_and_velocity(self.sol.r[:, -1],
-                                                       self.sol.v[:, -1])
+                self.set_initial_position_and_velocity(self.sol.r[:, 0 if reset_pos else -1],
+                                                       self.sol.v[:, 0 if reset_pos else -1])
                 ii+=1
 
         if return_details:

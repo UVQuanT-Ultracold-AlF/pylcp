@@ -547,7 +547,19 @@ class laserBeam(object):
 
                 # Save the variable:
                 self.pol = pol.astype('complex128')
+            elif pol_coord=='spherical_kvec':
+                self.pol = pol.astype('complex128')
+                self.pol, self.pol_sig = promote_to_lambda(self.pol, var_name='polarization')
+                pol = self.project_pol(self.kvec()/np.linalg.norm(self.kvec()),
+                                        invert=True).astype('complex128')
+                pol_cart = spherical2cart(pol)
 
+                # Check for transverseness:
+                if np.abs(np.dot(self.kvec(), pol_cart)) > 1e-9:
+                    raise ValueError("I'm sorry; light is a transverse wave")
+
+                # Save the variable:
+                self.pol = pol.astype('complex128')
             # Finally, normalize
             self.pol = self.pol/np.linalg.norm(self.pol)
         else:
@@ -1053,11 +1065,12 @@ class gaussianBeam(laserBeam):
         Detuning of the laser beam.  If a callable, it must have a
         signature like (t) where t is a float and it must return a float.
     wb : float
-        The :math:`1/e^2` radius of the beam.
+        The :math:`1/e^2` radius of the beam.    
+    pos : array_like with shape (3,)
     **kwargs:
         Additional keyword arguments to pass to the laserBeam superclass.
     """
-    def __init__(self, kvec, pol, s, delta, wb, **kwargs):
+    def __init__(self, kvec, pol, s, delta, wb, pos = np.array([0.,0.,0.]), **kwargs):
         if callable(kvec):
             raise TypeError('kvec cannot be a function for a Gaussian beam.')
 
@@ -1076,6 +1089,7 @@ class gaussianBeam(laserBeam):
         self.s_max, _ = promote_to_lambda(s) # central saturation parameter
         self.wb = wb # 1/e^2 radius
         self.define_rotation_matrix()
+        self.position = pos
 
     def define_rotation_matrix(self):
         # Angles of rotation:
@@ -1087,8 +1101,9 @@ class gaussianBeam(laserBeam):
         self.rmat_inv = Rotation.from_euler('ZY',[phi, th]).as_matrix()
 
     def intensity(self, R=np.array([0., 0., 0.]), t=0.):
+        Rprime = (R.T - self.position).T
         # Rotate up to the z-axis where we can apply formulas:
-        Rp = np.einsum('ij,j...->i...', self.rmat, R)
+        Rp = np.einsum('ij,j...->i...', self.rmat, Rprime)
         rho_sq=np.sum(Rp[:2]**2, axis=0)
         # Return the intensity:
         return self.s_max(R,t)*np.exp(-2*rho_sq/self.wb**2)
@@ -1208,7 +1223,7 @@ class clippedGaussianBeam(gaussianBeam):
     def intensity(self, R=np.array([0., 0., 0.]), t=0.):
         Rp = np.einsum('ij,j...->i...', self.rmat, R)
         rho_sq = np.sum(Rp[:2]**2, axis=0)
-        return self.s_max*np.exp(-2*rho_sq/self.wb**2)*(np.sqrt(rho_sq)<self.rs)
+        return self.s_max(R,t)*np.exp(-2*rho_sq/self.wb**2)*(np.sqrt(rho_sq)<self.rs)
 
 
 class laserBeams(object):
